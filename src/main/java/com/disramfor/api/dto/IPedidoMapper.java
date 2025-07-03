@@ -2,6 +2,7 @@ package com.disramfor.api.dto;
 
 import com.disramfor.api.entity.DetallePedido;
 import com.disramfor.api.entity.Pedido;
+import com.disramfor.api.entity.Producto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -33,6 +34,17 @@ public interface IPedidoMapper {
             dto.setCantidad(d.getCantidad());
             dto.setPrecioUnitario(d.getPrecioUnitario());
             dto.setSubtotal(d.getSubtotal());
+            Producto producto = d.getProducto();
+            if (producto != null) {
+                dto.setProductoCodigo(producto.getCodigo());
+                dto.setProductoNombre(producto.getNombre());
+
+
+                dto.setImagenUrl(producto.getImagenUrl());
+                dto.setPasillo(producto.getPasillo());
+                dto.setNivel(producto.getNivel());
+                dto.setEspacio(producto.getEspacio());
+            }
             return dto;
         }).toList();
     }
