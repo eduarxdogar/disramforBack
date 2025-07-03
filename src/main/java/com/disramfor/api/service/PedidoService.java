@@ -1,23 +1,22 @@
 package com.disramfor.api.service;
 
-import com.disramfor.api.dto.DetallePedidoRequestDTO;
-import com.disramfor.api.dto.IPedidoMapper;
-import com.disramfor.api.dto.PedidoRequestDTO;
-import com.disramfor.api.dto.PedidoResponseDTO;
+import com.disramfor.api.dto.*;
 import com.disramfor.api.entity.*;
 import com.disramfor.api.repository.IClienteRepository;
 import com.disramfor.api.repository.IDetallePedidoRepository;
 import com.disramfor.api.repository.IPedidoRepository;
 import com.disramfor.api.repository.IProductoRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 @Service
@@ -29,7 +28,7 @@ public class PedidoService {
     private final IProductoRepository productoRepo;
     private final IPedidoMapper mapper;
 
-    @Transactional
+    @org.springframework.transaction.annotation.Transactional
     public PedidoResponseDTO crearPedido(PedidoRequestDTO req) {
         Cliente c = clienteRepo.findById(req.getClienteId())
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no existe"));
@@ -67,11 +66,30 @@ public class PedidoService {
         return mapper.toResponse(guardado);
     }
 
-    public List<PedidoResponseDTO> listarPedidos() {
-        return pedidoRepo.findAll().stream()
-                .map(mapper::toResponse)
-                .toList();
+    // ¡ESTE MÉTODO REEMPLAZA A TU ANTIGUO listarPedidos()!
+    @org.springframework.transaction.annotation.Transactional(readOnly = true) // Buena práctica para métodos de solo lectura
+    public Page<PedidoResumenDTO> listarPedidosResumen(Pageable pageable) {
+        Page<Pedido> pedidosPage = pedidoRepo.findAll(pageable);
+        return pedidosPage.map(this::convertirAPedidoResumenDTO);
     }
+
+    // Método de ayuda para la conversión (Corregido)
+    private PedidoResumenDTO convertirAPedidoResumenDTO(Pedido pedido) {
+        PedidoResumenDTO dto = new PedidoResumenDTO();
+        dto.setId(pedido.getId());
+        dto.setFecha(pedido.getFecha());
+        dto.setEstado(pedido.getEstado().name());
+        dto.setTotal(pedido.getTotal());
+
+        if (pedido.getCliente() != null) {
+            dto.setClienteNombre(pedido.getCliente().getNombre());
+            // CORRECCIÓN: Obtenemos el asesor desde el Cliente, como en tu modelo.
+            dto.setAsesorNombre(pedido.getCliente().getAsesor());
+        }
+
+        return dto;
+    }
+
 
     public PedidoResponseDTO obtenerPedido(Long id) {
         Pedido p = pedidoRepo.findById(id)

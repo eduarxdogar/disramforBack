@@ -2,9 +2,12 @@ package com.disramfor.api.controller;
 
 import com.disramfor.api.dto.PedidoRequestDTO;
 import com.disramfor.api.dto.PedidoResponseDTO;
+import com.disramfor.api.dto.PedidoResumenDTO;
 import com.disramfor.api.service.PedidoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,9 +26,10 @@ public class PedidoController {
         return service.crearPedido(dto);
     }
 
+
     @GetMapping
-    public List<PedidoResponseDTO> listar() {
-        return service.listarPedidos();
+    public Page<PedidoResumenDTO> listar(Pageable pageable) {
+        return service.listarPedidosResumen(pageable);
     }
 
     @GetMapping("/{id}")

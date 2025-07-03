@@ -1,9 +1,6 @@
 package com.disramfor.api.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,10 +18,15 @@ public class Producto {
 
     @Column(nullable = false)
     private String nombre;
-
+    @Column(name = "imagen_url")
+    private String imagenUrl;
     private String pasillo;
     private Integer nivel;
     private Integer espacio;
     private BigDecimal precioUnitario;
+
+    @ManyToOne
+    @JoinColumn(name = "categoria_id", nullable = false)
+    private Categoria categoria;
 }
 
