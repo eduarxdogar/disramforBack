@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ClienteService {
@@ -21,18 +22,12 @@ public class ClienteService {
     private IClienteMapper mapper;
 
     public List<ClienteResponseDTO> listar() {
-        List<Cliente> todos = repo.findAll();
-        List<ClienteResponseDTO> salida = new ArrayList<>();
 
-        for (Cliente c : todos) {
-            // descartamos cualquier fila inesperada
-            if (c != null && c.getId() != null) {
-                // usamos el constructor de tu DTO en vez de MapStruct
-                salida.add(new ClienteResponseDTO(c));
-            }
-        }
 
-        return salida;
+        return repo.findAll()
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
     }
     // Busca exacto por NIT
     public ClienteResponseDTO buscarPorNit(String nit) {
@@ -42,18 +37,10 @@ public class ClienteService {
     }
     // Búsqueda parcial por NIT o nombre, conversión manual para evitar NPE
     public List<ClienteResponseDTO> buscarPorTermino(String term) {
-        List<Cliente> encontrados = repo.searchByNitOrNombre(term);
-        List<ClienteResponseDTO> salida = new ArrayList<>();
-
-        for (Cliente c : encontrados) {
-            // 1) descartamos cualquier entrada inesperada
-            if (c != null && c.getId() != null) {
-                // 2) creamos el DTO con tu constructor
-                salida.add(new ClienteResponseDTO(c));
-            }
-        }
-
-        return salida;
+          return repo.searchByNitOrNombre(term)
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
     }
 
 
@@ -64,23 +51,17 @@ public class ClienteService {
     }
 
     public ClienteResponseDTO crear(ClienteRequestDTO dto) {
-        // 1) Convierte el DTO a entidad
         Cliente entidad = mapper.toEntity(dto);
-        // 2) Guarda en BD
         Cliente saved = repo.save(entidad);
-        // 3) Mapea manualmente al DTO de respuesta
-        return new ClienteResponseDTO(saved);
+        return mapper.toResponse(saved);
     }
 
     public ClienteResponseDTO actualizar(Long id, ClienteRequestDTO dto) {
-        // 1) obtenemos la entidad existente (o lanzamos si no existe)
         Cliente existing = buscarEntidadPorId(id);
-        // 2) copiamos los campos no nulos del DTO sobre la entidad
         mapper.updateEntityFromDto(dto, existing);
-        // 3) guardamos
         Cliente saved = repo.save(existing);
-        // 4) convertimos manualmente al DTO, evitando MapStruct
-        return new ClienteResponseDTO(saved);
+        // ¡Ahora usamos el mapper también aquí!
+        return mapper.toResponse(saved);
     }
 
     public void eliminar(Long id) {

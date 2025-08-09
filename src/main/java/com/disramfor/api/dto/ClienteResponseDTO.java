@@ -17,14 +17,5 @@ public class ClienteResponseDTO {
     private String email;
     private String asesor;
 
-    public ClienteResponseDTO(Cliente c) {
-        this.id        = c.getId();
-        this.nit       = c.getNit();
-        this.nombre    = c.getNombre();
-        this.direccion = c.getDireccion();
-        this.ciudad    = c.getCiudad();
-        this.telefono  = c.getTelefono();
-        this.email     = c.getEmail();
-        this.asesor    = c.getAsesor();
-    }
+
 }
