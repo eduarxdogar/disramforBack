@@ -1,6 +1,6 @@
 # Este pipeline se activará automáticamente cada vez que se haga un push a la rama 'main'
 trigger:
-- main
+- master
 
 # Define el tipo de agente que se usará para ejecutar las tareas del pipeline.
 # 'ubuntu-latest' es una imagen de Linux, la cual es la opción recomendada para proyectos Java.
@@ -76,37 +76,12 @@ stages:
             inputs:
               # Nombre de tu conexión de servicio a Azure.
               # Este es el nombre que se muestra en tu captura de pantalla.
-              azureSubscription: 'Azure subscription 1'
+              azureSubscription: 'azure-conn-disramfor'
               # El tipo de aplicación, en este caso es una web app.
               appType: 'webApp'
               # El nombre que le diste a tu App Service en el portal de Azure.
               appName: 'disramfor-api-qa'
               # La ruta al archivo JAR que descargamos.
               package: '$(System.ArtifactsDirectory)/drop-backend/*.jar'
-
-
-
-
-# Define el tipo de agente que se usará para ejecutar el pipeline.
-# 'ubuntu-latest' es una imagen de Linux, ideal para tu proyecto Java.
-
-
-
-
-# Aquí tenemos una fase de compilación y una de despliegue.
-
-# =========================================================================
-# STAGE 1: COMPILACIÓN y PRUEBAS
-# Este stage se encarga de compilar el código de Java y ejecutar las pruebas unitarias.
-# =========================================================================
-
-
-
-
-# =========================================================================
-# STAGE 2: DESPLIEGUE EN QA
-# Este stage toma el artefacto del stage anterior y lo despliega.
-# =========================================================================
-
 
 
