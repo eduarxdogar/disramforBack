@@ -1,0 +1,87 @@
+# Este pipeline se activará automáticamente cada vez que se haga un push a la rama 'main'
+trigger:
+- master
+
+# Define el tipo de agente que se usará para ejecutar las tareas del pipeline.
+# 'ubuntu-latest' es una imagen de Linux, la cual es la opción recomendada para proyectos Java.
+pool:
+  vmImage: 'ubuntu-latest'
+
+# Los 'stages' son las fases principales de tu pipeline.
+# Aquí tenemos dos fases: una para compilar y otra para desplegar.
+stages:
+
+# =========================================================================
+# STAGE 1: COMPILACIÓN y PRUEBAS
+# Este stage se encarga de compilar el código de Java, ejecutar las pruebas
+# unitarias y empaquetar la aplicación en un archivo JAR.
+# =========================================================================
+- stage: Build
+  displayName: 'Compilar y Probar el Backend'
+  jobs:
+  - job: BuildJob
+    displayName: 'Compilar con Maven'
+    steps:
+    # Tarea para instalar las dependencias y compilar el proyecto con Maven.
+    # El comando 'clean install' también ejecuta las pruebas unitarias que tengas.
+    - task: Maven@4
+      displayName: 'Ejecutar mvn clean install'
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'clean install'
+        # Publica los resultados de las pruebas unitarias en Azure DevOps.
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+
+    # Tarea para publicar el archivo JAR compilado como un "artefacto".
+    # Un artefacto es el resultado de la compilación que se guarda para usarlo
+    # en etapas posteriores, como el despliegue.
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publicar el archivo JAR'
+      inputs:
+        pathToPublish: '$(Build.SourcesDirectory)/target/*.jar'
+        artifactName: 'drop-backend'
+
+# =========================================================================
+# STAGE 2: DESPLIEGUE EN QA
+# Este stage toma el artefacto generado en el stage anterior y lo despliega
+# en tu Azure App Service de ambiente de QA.
+# =========================================================================
+- stage: DeployToQA
+  displayName: 'Desplegar en Ambiente de QA'
+  # Este stage solo se ejecutará si el stage de compilación ha sido exitoso.
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployJob
+    displayName: 'Despliegue a Azure App Service'
+    # Define el ambiente de despliegue en Azure DevOps.
+    # El nombre 'QA' es una convención, puedes crear un ambiente con este nombre.
+    environment: 'QA' 
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Tarea para descargar el artefacto (el JAR) del pipeline.
+          # Este artefacto es lo que publicamos en el stage 'Build'.
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              artifactName: 'drop-backend'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          # Tarea para desplegar la aplicación en tu Azure App Service.
+          - task: AzureWebApp@1
+            displayName: 'Deploy al App Service'
+            inputs:
+              # Nombre de tu conexión de servicio a Azure.
+              # Este es el nombre que se muestra en tu captura de pantalla.
+              azureSubscription: 'azure-conn-disramfor'
+              # El tipo de aplicación, en este caso es una web app.
+              appType: 'webApp'
+              # El nombre que le diste a tu App Service en el portal de Azure.
+              appName: 'disramfor-api-qa'
+              # La ruta al archivo JAR que descargamos.
+              package: '$(System.ArtifactsDirectory)/drop-backend/*.jar'
+
+
