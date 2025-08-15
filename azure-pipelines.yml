@@ -39,7 +39,8 @@ stages:
     - task: PublishBuildArtifacts@1
       displayName: 'Publicar el archivo JAR'
       inputs:
-        pathToPublish: '$(Build.SourcesDirectory)/target/*.jar'
+        # Aquí ajustamos la ruta para que sea más precisa
+        pathToPublish: '$(Build.SourcesDirectory)/target/disramfor-api-0.0.1-SNAPSHOT.jar'
         artifactName: 'drop-backend'
 
 # =========================================================================
