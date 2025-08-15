@@ -7,7 +7,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper(componentModel="spring")
@@ -21,7 +20,6 @@ public interface IPedidoMapper {
     @Mapping(source="cliente.direccion", target="direccionEntrega")
     @Mapping(source="cliente.asesor",       target="asesor")
     @Mapping(source="detalles", target="items", qualifiedByName="mapDetallesToResponse")
-
     PedidoResponseDTO toResponse(Pedido pedido);
 
     @Named("mapDetallesToResponse")

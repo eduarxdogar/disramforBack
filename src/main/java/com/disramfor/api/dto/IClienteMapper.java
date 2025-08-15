@@ -1,7 +1,5 @@
 package com.disramfor.api.dto;
 import com.disramfor.api.entity.Cliente;
-import com.disramfor.api.dto.ClienteRequestDTO;
-import com.disramfor.api.dto.ClienteResponseDTO;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring",
