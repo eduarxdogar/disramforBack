@@ -81,4 +81,4 @@ stages:
               appType: 'webApp'
               appName: 'disramfor-api-qa'
               # La ruta al archivo JAR que descargamos.
-              package: '$(System.ArtifactsDirectory)/drop-backend/*.jar'
+              package: '$(System.ArtifactsDirectory)/drop-backend/disramfor-api-0.0.1-SNAPSHOT.jar'
