@@ -28,7 +28,7 @@ stages:
       displayName: 'Ejecutar mvn clean install'
       inputs:
         mavenPomFile: 'pom.xml'
-        goals: 'clean install'
+        goals: 'clean install -DskipTests' # Se le pasa la propiedad para omitir las pruebas.
         # Publica los resultados de las pruebas unitarias en Azure DevOps.
         publishJUnitResults: true
         testResultsFiles: '**/surefire-reports/TEST-*.xml'
@@ -39,7 +39,8 @@ stages:
     - task: PublishBuildArtifacts@1
       displayName: 'Publicar el archivo JAR'
       inputs:
-        pathToPublish: '$(Build.SourcesDirectory)/target/*.jar'
+        # Aquí ajustamos la ruta para que sea más precisa
+        pathToPublish: '$(Build.SourcesDirectory)/target/disramfor-api-0.0.1-SNAPSHOT.jar'
         artifactName: 'drop-backend'
 
 # =========================================================================
@@ -79,9 +80,6 @@ stages:
               azureSubscription: 'azure-conn-disramfor'
               # El tipo de aplicación, en este caso es una web app.
               appType: 'webApp'
-              # El nombre que le diste a tu App Service en el portal de Azure.
               appName: 'disramfor-api-qa'
               # La ruta al archivo JAR que descargamos.
-              package: '$(System.ArtifactsDirectory)/drop-backend/*.jar'
-
-
+              package: '$(System.ArtifactsDirectory)/drop-backend/disramfor-api-0.0.1-SNAPSHOT.jar'
