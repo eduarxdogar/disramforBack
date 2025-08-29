@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -27,14 +28,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Sintaxis moderna para deshabilitar CSRF
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Agregamos la configuración de CORS
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         // Endpoint público para autenticación.
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Para que el catálogo sea accesible, lo dejamos público.
-                        // En el futuro, lo protegeremos con roles específicos.
+                        // <--- AHORA TODOS ESTOS ENDPOINTS SON PÚBLICOS TEMPORALMENTE
+                        .requestMatchers("/api/categorias/**").permitAll()
                         .requestMatchers("/api/productos/**").permitAll()
+                        .requestMatchers("/api/clientes/**").permitAll()
+                        .requestMatchers("/api/pedidos/**").permitAll()
                         // Todas las demás peticiones necesitan autenticación.
                         .anyRequest().authenticated()
                 )

@@ -6,6 +6,8 @@ import com.disramfor.api.dto.IClienteMapper;
 import com.disramfor.api.entity.Cliente;
 import com.disramfor.api.repository.IClienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,13 +22,13 @@ public class ClienteService {
     @Autowired
     private IClienteMapper mapper;
 
-    public List<ClienteResponseDTO> listar() {
-
-
-        return repo.findAll()
-                .stream()
-                .map(mapper::toResponse)
-                .collect(Collectors.toList());
+    public Page<ClienteResponseDTO> listar(Pageable pageable, String term) {
+        if (term != null && !term.isEmpty()) {
+            return repo.searchByNitOrNombre(term, pageable)
+                    .map(mapper::toResponse);
+        }
+        return repo.findAll(pageable)
+                .map(mapper::toResponse);
     }
     // Busca exacto por NIT
     public ClienteResponseDTO buscarPorNit(String nit) {
@@ -36,7 +38,7 @@ public class ClienteService {
     }
     // Búsqueda parcial por NIT o nombre, conversión manual para evitar NPE
     public List<ClienteResponseDTO> buscarPorTermino(String term) {
-          return repo.searchByNitOrNombre(term)
+          return repo.searchByNitOrNombre(term,Pageable.unpaged())
                 .stream()
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());

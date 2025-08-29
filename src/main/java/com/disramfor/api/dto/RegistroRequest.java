@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RegistroRequest {
 
-    private String usuarionombre;
+    private String username;
     private String email;
     private String password;
     private Rol rol;

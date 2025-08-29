@@ -6,7 +6,10 @@ import com.disramfor.api.dto.ClienteResponseDTO;
 import com.disramfor.api.service.ClienteService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,8 +22,11 @@ public class ClienteController {
     private ClienteService service;
 
     @GetMapping
-    public List<ClienteResponseDTO> listar() {
-        return service.listar();
+    public ResponseEntity<Page<ClienteResponseDTO>> listarClientes(
+            @RequestParam(required = false, defaultValue = "") String term,
+            Pageable pageable) {
+
+        return ResponseEntity.ok(service.listar(pageable, term));
     }
 
     @GetMapping("/{id}")
