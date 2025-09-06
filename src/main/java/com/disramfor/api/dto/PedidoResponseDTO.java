@@ -12,9 +12,16 @@ public class PedidoResponseDTO {
     private Long id;
     private Long clienteId;
     private LocalDateTime fecha;
-    private String clienteNombre;   // <-- nuevo
+    private String clienteNombre;
     private String clienteNit;
     private EstadoPedido estado;
+
+    // --- NUEVOS CAMPOS ---
+    private BigDecimal subtotal;
+    private BigDecimal descuento;
+    private BigDecimal iva;
+    // ---------------------
+
     private BigDecimal total;
     private List<DetallePedidoResponseDTO> items;
     private String asesor;

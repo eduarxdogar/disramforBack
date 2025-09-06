@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "cliente")
@@ -26,6 +27,8 @@ public class Cliente {
     private String ciudad;
     private String telefono;
     private String email;
-
     private String asesor;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal descuento;
 }

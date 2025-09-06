@@ -30,6 +30,19 @@ public class Pedido {
     @Enumerated(EnumType.STRING)
     private EstadoPedido estado;
 
+
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal subtotal;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal descuento;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal iva;
+
+
+    @Column(precision = 10, scale = 2)
     private BigDecimal total;
     @JsonIgnore
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)

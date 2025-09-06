@@ -3,6 +3,7 @@ package com.disramfor.api.service;
 import com.disramfor.api.dto.*;
 import com.disramfor.api.dto.IPedidoMapper;
 import com.disramfor.api.entity.*;
+import com.disramfor.api.exception.ResourceNotFoundException;
 import com.disramfor.api.repository.IClienteRepository;
 import com.disramfor.api.repository.IDetallePedidoRepository;
 import com.disramfor.api.repository.IPedidoRepository;
@@ -29,7 +30,7 @@ public class PedidoService {
     private final IProductoRepository productoRepo;
     private final IPedidoMapper mapper;
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public PedidoResponseDTO crearPedido(PedidoRequestDTO req) {
         Cliente c = clienteRepo.findById(req.getClienteId())
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no existe"));
@@ -40,29 +41,44 @@ public class PedidoService {
         pedido.setEstado(EstadoPedido.PENDIENTE);
         pedido.setDetalles(new ArrayList<>());
 
-        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal subtotalCalculado = BigDecimal.ZERO;
 
         for (DetallePedidoRequestDTO item : req.getItems()) {
-
             Producto p = productoRepo.findById(item.getProductoCodigo())
                     .orElseThrow(() -> new EntityNotFoundException(
                             "Producto no existe: " + item.getProductoCodigo()));
 
-            BigDecimal precio     = p.getPrecioUnitario();
-            BigDecimal subtotal   = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
+            BigDecimal precio = p.getPrecioUnitario();
+            BigDecimal subtotalItem = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
 
             DetallePedido det = new DetallePedido();
             det.setPedido(pedido);
             det.setProducto(p);
             det.setCantidad(item.getCantidad());
             det.setPrecioUnitario(precio);
-            det.setSubtotal(subtotal);
+            det.setSubtotal(subtotalItem);
 
             pedido.getDetalles().add(det);
-            total = total.add(subtotal);
+            subtotalCalculado = subtotalCalculado.add(subtotalItem);
         }
 
-        pedido.setTotal(total);
+        // --- LÓGICA DE CÁLCULO DE TOTALES ---
+        BigDecimal descuentoPorcentaje = c.getDescuento() != null ? c.getDescuento() : BigDecimal.ZERO;
+        BigDecimal montoDescuento = subtotalCalculado.multiply(descuentoPorcentaje);
+        BigDecimal subtotalConDescuento = subtotalCalculado.subtract(montoDescuento);
+
+        // Asumimos un IVA del 19% (0.19) - Puedes hacer esto configurable si lo necesitas
+        BigDecimal tasaIva = new BigDecimal("0.19");
+        BigDecimal montoIva = subtotalConDescuento.multiply(tasaIva);
+
+        BigDecimal totalFinal = subtotalConDescuento.add(montoIva);
+
+        pedido.setSubtotal(subtotalCalculado);
+        pedido.setDescuento(montoDescuento);
+        pedido.setIva(montoIva);
+        pedido.setTotal(totalFinal);
+        // ------------------------------------
+
         Pedido guardado = pedidoRepo.save(pedido);
         return mapper.toResponse(guardado);
     }
@@ -127,6 +143,81 @@ public class PedidoService {
         // … demás campos que quieras exponer …
 
         pedidoRepo.save(p);
+    }
+
+
+    @Transactional
+    public void actualizarEstado(Long id, EstadoPedido nuevoEstado) {
+        // Busca el pedido en la base de datos o lanza una excepción si no lo encuentra.
+        Pedido pedido = pedidoRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con id: " + id));
+
+        // Actualiza el estado del pedido.
+        pedido.setEstado(nuevoEstado);
+
+        // Guarda los cambios en la base de datos.
+        pedidoRepo.save(pedido);
+    }
+
+
+    @Transactional
+    public PedidoResponseDTO actualizarPedido(Long id, PedidoRequestDTO req) {
+        // 1. Buscar el pedido existente
+        Pedido pedido = pedidoRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con ID: " + id));
+
+        // 2. Validar que el pedido se pueda editar (solo si está pendiente)
+        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
+            throw new IllegalStateException("Solo se pueden editar pedidos en estado PENDIENTE.");
+        }
+
+        // 3. Limpiar los detalles anteriores para reemplazarlos
+        // Usar orphanRemoval=true en la entidad Pedido asegura que se borren de la BD
+        pedido.getDetalles().clear();
+
+        // 4. Recalcular todo (la misma lógica de crearPedido, pero sobre el objeto existente)
+        Cliente cliente = clienteRepo.findById(req.getClienteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado con ID: " + req.getClienteId()));
+
+        pedido.setCliente(cliente);
+        pedido.setFecha(LocalDateTime.now()); // Actualizamos la fecha a la de la modificación
+
+        BigDecimal subtotalCalculado = BigDecimal.ZERO;
+        for (DetallePedidoRequestDTO itemDTO : req.getItems()) {
+            Producto producto = productoRepo.findById(itemDTO.getProductoCodigo())
+                    .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + itemDTO.getProductoCodigo()));
+
+            BigDecimal precio = producto.getPrecioUnitario();
+            BigDecimal subtotalItem = precio.multiply(BigDecimal.valueOf(itemDTO.getCantidad()));
+
+            DetallePedido detalle = new DetallePedido();
+            detalle.setPedido(pedido);
+            detalle.setProducto(producto);
+            detalle.setCantidad(itemDTO.getCantidad());
+            detalle.setPrecioUnitario(precio);
+            detalle.setSubtotal(subtotalItem);
+
+            pedido.getDetalles().add(detalle);
+            subtotalCalculado = subtotalCalculado.add(subtotalItem);
+        }
+
+        // 5. Calcular totales finales con la nueva información
+        BigDecimal descuentoPorcentaje = cliente.getDescuento() != null ? cliente.getDescuento() : BigDecimal.ZERO;
+        BigDecimal montoDescuento = subtotalCalculado.multiply(descuentoPorcentaje);
+        BigDecimal subtotalConDescuento = subtotalCalculado.subtract(montoDescuento);
+
+        BigDecimal tasaIva = new BigDecimal("0.19");
+        BigDecimal montoIva = subtotalConDescuento.multiply(tasaIva);
+        BigDecimal totalFinal = subtotalConDescuento.add(montoIva);
+
+        pedido.setSubtotal(subtotalCalculado);
+        pedido.setDescuento(montoDescuento);
+        pedido.setIva(montoIva);
+        pedido.setTotal(totalFinal);
+
+        // 6. Guardar el pedido actualizado y devolver la respuesta
+        Pedido pedidoActualizado = pedidoRepo.save(pedido);
+        return mapper.toResponse(pedidoActualizado);
     }
 
 
