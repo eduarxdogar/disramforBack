@@ -1,9 +1,14 @@
+// Archivo MODIFICADO: src/main/java/com/disramfor/api/dto/ClienteRequestDTO.java
+
 package com.disramfor.api.dto;
+
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import java.math.BigDecimal;
 
 /**
  * DTO para las peticiones de creación o actualización de Cliente.
@@ -31,4 +36,11 @@ public class ClienteRequestDTO {
     @Email(message = "El email no tiene el formato correcto")
     @Size(max = 100, message = "El email no puede exceder 100 caracteres")
     private String email;
+
+
+    // Ahora, @NotNull solo se activará cuando se use el grupo AdminAction.
+    @NotNull(message = "El asesor es obligatorio", groups = IValidationGroups.AdminAction.class)
+    private Long asesorId;
+
+    private BigDecimal descuento;
 }

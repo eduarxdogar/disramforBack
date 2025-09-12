@@ -17,11 +17,21 @@ public interface IClienteRepository extends JpaRepository<Cliente, Long>, JpaSpe
     Optional<Cliente> findByNit(String nit);
 
     @Query("""
-        SELECT c 
-        FROM Cliente c 
-        WHERE LOWER(c.nit)   LIKE LOWER(CONCAT('%', :term, '%'))
-           OR LOWER(c.nombre) LIKE LOWER(CONCAT('%', :term, '%'))
+        SELECT c
+        FROM Cliente c
+        WHERE (LOWER(c.nit) LIKE LOWER(CONCAT('%', :term, '%'))
+           OR LOWER(c.nombre) LIKE LOWER(CONCAT('%', :term, '%')))
     """)
-    Page<Cliente> searchByNitOrNombre(@Param("term") String term, Pageable pageable);
+    Page<Cliente> searchByTerm(@Param("term") String term, Pageable pageable);
 
+    // --- NUEVO MÉTODO ---
+    // Busca clientes por el ID del asesor asignado.
+    @Query("""
+        SELECT c
+        FROM Cliente c
+        WHERE c.asesor.id = :asesorId
+        AND (LOWER(c.nit) LIKE LOWER(CONCAT('%', :term, '%'))
+           OR LOWER(c.nombre) LIKE LOWER(CONCAT('%', :term, '%')))
+    """)
+    Page<Cliente> searchByAsesorIdAndTerm(@Param("asesorId") Long asesorId, @Param("term") String term, Pageable pageable);
 }

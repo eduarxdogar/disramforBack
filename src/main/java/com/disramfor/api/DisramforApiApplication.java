@@ -10,8 +10,8 @@ import static org.springframework.data.web.config.EnableSpringDataWebSupport.Pag
 @SpringBootApplication
 public class DisramforApiApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(DisramforApiApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(DisramforApiApplication.class, args);
+    }
 
 }

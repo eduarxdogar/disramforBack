@@ -32,7 +32,7 @@ public class AuthService {
             }
 
             var user = Usuario.builder()
-                    .username(request.getUsername())
+                    .nombreUsuario(request.getNombreUsuario())
                     .email(request.getEmail())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .rol(request.getRol())

@@ -24,6 +24,8 @@ public class Producto {
     private Integer nivel;
     private Integer espacio;
     private BigDecimal precioUnitario;
+    @Column(name = "stock_disponible", nullable = false, columnDefinition = "INT DEFAULT 100")
+    private Integer stockDisponible;
 
     @ManyToOne
     @JoinColumn(name = "categoria_id", nullable = false)

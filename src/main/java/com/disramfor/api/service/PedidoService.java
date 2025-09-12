@@ -3,6 +3,7 @@ package com.disramfor.api.service;
 import com.disramfor.api.dto.*;
 import com.disramfor.api.dto.IPedidoMapper;
 import com.disramfor.api.entity.*;
+import com.disramfor.api.exception.BusinessException;
 import com.disramfor.api.exception.ResourceNotFoundException;
 import com.disramfor.api.repository.IClienteRepository;
 import com.disramfor.api.repository.IDetallePedidoRepository;
@@ -30,10 +31,11 @@ public class PedidoService {
     private final IProductoRepository productoRepo;
     private final IPedidoMapper mapper;
 
+
     @Transactional
     public PedidoResponseDTO crearPedido(PedidoRequestDTO req) {
         Cliente c = clienteRepo.findById(req.getClienteId())
-                .orElseThrow(() -> new EntityNotFoundException("Cliente no existe"));
+                .orElseThrow(() -> new EntityNotFoundException("Cliente no existe con ID: " + req.getClienteId()));
 
         Pedido pedido = new Pedido();
         pedido.setCliente(c);
@@ -44,9 +46,18 @@ public class PedidoService {
         BigDecimal subtotalCalculado = BigDecimal.ZERO;
 
         for (DetallePedidoRequestDTO item : req.getItems()) {
-            Producto p = productoRepo.findById(item.getProductoCodigo())
+            // --- LÓGICA DE STOCK ---
+            Producto p = productoRepo.findByIdWithLock(item.getProductoCodigo())
                     .orElseThrow(() -> new EntityNotFoundException(
                             "Producto no existe: " + item.getProductoCodigo()));
+
+            if (p.getStockDisponible() < item.getCantidad()) {
+                throw new BusinessException("Stock insuficiente para el producto: " + p.getNombre() + ". Disponibles: " + p.getStockDisponible());
+            }
+
+            p.setStockDisponible(p.getStockDisponible() - item.getCantidad());
+            // No es necesario un save explícito aquí, JPA lo manejará al final de la transacción.
+            // --- FIN LÓGICA DE STOCK ---
 
             BigDecimal precio = p.getPrecioUnitario();
             BigDecimal subtotalItem = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
@@ -62,7 +73,7 @@ public class PedidoService {
             subtotalCalculado = subtotalCalculado.add(subtotalItem);
         }
 
-        // --- LÓGICA DE CÁLCULO DE TOTALES ---
+        // --- LÓGICA DE CÁLCULO DE TOTALES (IVA Y DESCUENTO) ---
         BigDecimal descuentoPorcentaje = c.getDescuento() != null ? c.getDescuento() : BigDecimal.ZERO;
         BigDecimal montoDescuento = subtotalCalculado.multiply(descuentoPorcentaje);
         BigDecimal subtotalConDescuento = subtotalCalculado.subtract(montoDescuento);
@@ -73,38 +84,21 @@ public class PedidoService {
 
         BigDecimal totalFinal = subtotalConDescuento.add(montoIva);
 
+        // Asignamos todos los valores calculados al pedido
         pedido.setSubtotal(subtotalCalculado);
         pedido.setDescuento(montoDescuento);
         pedido.setIva(montoIva);
         pedido.setTotal(totalFinal);
-        // ------------------------------------
+        // ----------------------------------------------------
 
         Pedido guardado = pedidoRepo.save(pedido);
         return mapper.toResponse(guardado);
     }
 
-    // ¡ESTE MÉTODO REEMPLAZA A TU ANTIGUO listarPedidos()!
-    @org.springframework.transaction.annotation.Transactional(readOnly = true) // Buena práctica para métodos de solo lectura
+    @Transactional(readOnly = true)
     public Page<PedidoResumenDTO> listarPedidosResumen(Pageable pageable) {
-        Page<Pedido> pedidosPage = pedidoRepo.findAll(pageable);
-        return pedidosPage.map(this::convertirAPedidoResumenDTO);
-    }
-
-    // Método de ayuda para la conversión (Corregido)
-    private PedidoResumenDTO convertirAPedidoResumenDTO(Pedido pedido) {
-        PedidoResumenDTO dto = new PedidoResumenDTO();
-        dto.setId(pedido.getId());
-        dto.setFecha(pedido.getFecha());
-        dto.setEstado(pedido.getEstado().name());
-        dto.setTotal(pedido.getTotal());
-
-        if (pedido.getCliente() != null) {
-            dto.setClienteNombre(pedido.getCliente().getNombre());
-            // CORRECCIÓN: Obtenemos el asesor desde el Cliente, como en tu modelo.
-            dto.setAsesorNombre(pedido.getCliente().getAsesor());
-        }
-
-        return dto;
+        // Simplemente le pedimos al mapper que haga la conversión
+        return pedidoRepo.findAll(pageable).map(mapper::toResumen);
     }
 
 
