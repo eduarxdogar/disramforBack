@@ -10,6 +10,7 @@ import org.testcontainers.utility.DockerImageName;
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
 
+    @SuppressWarnings("resource")
     @Bean
     @ConfigurationProperties("spring.datasource.testcontainer")
     MySQLContainer<?> mysqlContainer() {

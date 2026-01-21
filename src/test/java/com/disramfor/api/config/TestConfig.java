@@ -17,6 +17,7 @@ public class TestConfig {
 
     @Bean
     public MySQLContainer<?> mysqlContainer() {
+        @SuppressWarnings("resource")
         MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
                 .withDatabaseName("disramfor_test")
                 .withUsername("test")

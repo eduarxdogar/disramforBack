@@ -54,7 +54,6 @@ public class ClienteController {
         return service.actualizar(id, dto);
     }
 
-    // --- ¡NUEVO ENDPOINT DE ACTUALIZAR PARA ASESOR! ---
     @PutMapping("/asesor/{id}")
     @PreAuthorize("hasAuthority('ASESOR')")
     public ClienteResponseDTO actualizarComoAsesor(@PathVariable Long id, @Validated(IValidationGroups.AsesorAction.class) @RequestBody ClienteRequestDTO dto) {
@@ -63,9 +62,9 @@ public class ClienteController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASESOR')") // Permitimos a ambos roles
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ASESOR')")
     public void eliminar(@PathVariable Long id) {
-        service.eliminar(id); // El servicio ya contiene la lógica de seguridad
+        service.eliminar(id);
     }
 
     @GetMapping("/nit/{nit}")

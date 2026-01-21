@@ -39,7 +39,7 @@ public class PedidoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'CARTERA . 'ASESOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'CARTERA', 'ASESOR')")
     public ResponseEntity<PedidoResponseDTO> actualizarPedidoCompleto(
             @PathVariable Long id,
             @Valid @RequestBody PedidoRequestDTO pedidoRequestDTO) {
@@ -68,4 +68,3 @@ public class PedidoController {
         service.eliminarPedido(id);
     }
 }
-

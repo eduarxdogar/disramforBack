@@ -22,6 +22,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Transactional
 public abstract class BaseIntegrationTest {
 
+    @SuppressWarnings("resource")
     @Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("disramfor_test")

@@ -1,5 +1,4 @@
 package com.disramfor.api.entity;
-import com.disramfor.api.dto.ClienteRequestDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

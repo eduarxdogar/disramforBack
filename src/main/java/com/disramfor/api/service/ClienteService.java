@@ -6,7 +6,7 @@ import com.disramfor.api.dto.IClienteMapper;
 import com.disramfor.api.entity.Cliente;
 import com.disramfor.api.entity.Rol;
 import com.disramfor.api.entity.Usuario;
-import com.disramfor.api.exception.ResourceNotFoundException; // Asegúrate de tener tu excepción personalizada
+import com.disramfor.api.exception.ResourceNotFoundException;
 import com.disramfor.api.repository.IClienteRepository;
 import com.disramfor.api.repository.IUsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +40,6 @@ public class ClienteService {
         } else if (usuarioLogueado.getRol() == Rol.ASESOR) {
             return repo.searchByAsesorIdAndTerm(usuarioLogueado.getId(), searchTerm, pageable).map(mapper::toResponse);
         }
-
         return Page.empty(pageable);
     }
 
@@ -61,9 +60,9 @@ public class ClienteService {
     public ClienteResponseDTO crear(ClienteRequestDTO dto) {
         Usuario asesor = usuarioRepository.findById(dto.getAsesorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Asesor no encontrado con ID: " + dto.getAsesorId()));
-        Cliente entidad = mapper.toEntity(dto);
-        entidad.setAsesor(asesor);
-        return mapper.toResponse(repo.save(entidad));
+        Cliente cliente = mapper.toEntity(dto);
+        cliente.setAsesor(asesor);
+        return mapper.toResponse(repo.save(cliente));
     }
 
     @Transactional
@@ -81,24 +80,21 @@ public class ClienteService {
     @Transactional
     public ClienteResponseDTO crearParaAsesor(ClienteRequestDTO dto) {
         Usuario asesorLogueado = getAuthenticatedUser();
-        Cliente entidad = mapper.toEntity(dto);
-        entidad.setAsesor(asesorLogueado);
-        return mapper.toResponse(repo.save(entidad));
+        Cliente cliente = mapper.toEntity(dto);
+        cliente.setAsesor(asesorLogueado);
+        return mapper.toResponse(repo.save(cliente));
     }
 
-    // --- ¡NUEVO MÉTODO PARA ACTUALIZAR COMO ASESOR! ---
     @Transactional
     public ClienteResponseDTO actualizarParaAsesor(Long id, ClienteRequestDTO dto) {
         Usuario asesorLogueado = getAuthenticatedUser();
         Cliente cliente = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado con ID: " + id));
 
-        // ¡VERIFICACIÓN DE PROPIEDAD! El asesor solo puede editar SUS clientes.
         if (!cliente.getAsesor().getId().equals(asesorLogueado.getId())) {
             throw new AccessDeniedException("No tienes permiso para actualizar este cliente.");
         }
 
-        // Actualizamos los datos, pero NUNCA el asesor.
         mapper.updateEntityFromDto(dto, cliente);
         return mapper.toResponse(repo.save(cliente));
     }
@@ -109,7 +105,6 @@ public class ClienteService {
         Cliente cliente = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado con ID: " + id));
 
-        // ¡VERIFICACIÓN DE PROPIEDAD! Solo el ADMIN o el dueño del cliente pueden eliminar.
         if (usuarioLogueado.getRol() == Rol.ASESOR && !cliente.getAsesor().getId().equals(usuarioLogueado.getId())) {
             throw new AccessDeniedException("No tienes permiso para eliminar este cliente.");
         }
@@ -117,7 +112,6 @@ public class ClienteService {
         repo.delete(cliente);
     }
 
-    // --- MÉTODOS DE BÚSQUEDA ---
     public ClienteResponseDTO buscarPorNit(String nit) {
         Cliente c = repo.findByNit(nit)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe cliente con NIT: " + nit));
@@ -131,18 +125,15 @@ public class ClienteService {
                 .collect(Collectors.toList());
     }
 
-    // --- MÉTODO AUXILIAR ---
     private Usuario getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
             throw new AccessDeniedException("Acceso denegado. Se requiere autenticación.");
         }
-        // Asumiendo que el UserDetails es tu entidad Usuario
         Object principal = authentication.getPrincipal();
         if (principal instanceof Usuario) {
             return (Usuario) principal;
         }
-        // Fallback si el principal es un string (username)
         String username = principal.toString();
         return usuarioRepository.findByEmail(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario '" + username + "' no encontrado."));

@@ -49,7 +49,8 @@ class ClienteIntegrationTest {
     private ObjectMapper objectMapper;
 
     // TestContainer con MySQL real
-    @Container
+    @SuppressWarnings("resource")
+@Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("disramfor_test")
             .withUsername("test")

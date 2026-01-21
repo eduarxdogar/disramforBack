@@ -43,6 +43,7 @@ class PerformanceTest {
     @Autowired
     private ICategoriaRepository categoriaRepository;
 
+    @SuppressWarnings("resource")
     @Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("disramfor_test")

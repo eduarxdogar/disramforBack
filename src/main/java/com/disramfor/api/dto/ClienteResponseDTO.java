@@ -1,6 +1,5 @@
 package com.disramfor.api.dto;
 
-import com.disramfor.api.entity.Cliente;
 import lombok.Data;
 
 import java.math.BigDecimal;

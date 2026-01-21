@@ -51,7 +51,8 @@ class PedidoIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Container
+    @SuppressWarnings("resource")
+@Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("disramfor_test")
             .withUsername("test")
