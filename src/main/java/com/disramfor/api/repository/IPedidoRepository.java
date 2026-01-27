@@ -13,34 +13,35 @@ import java.util.Optional;
 public interface IPedidoRepository extends JpaRepository<Pedido, Long> {
 
     List<Pedido> findByClienteId(Long clienteId);
-    //  Query optimizada para listar pedidos
+
+    // Query optimizada para listar pedidos
     // JOIN FETCH trae todo en UNA sola consulta
     @Query("""
-        SELECT DISTINCT p 
-        FROM Pedido p 
-        JOIN FETCH p.cliente c
-        LEFT JOIN FETCH p.detalles d
-        LEFT JOIN FETCH d.producto
-        """)
+            SELECT DISTINCT p
+            FROM Pedido p
+            JOIN FETCH p.cliente c
+            LEFT JOIN FETCH p.detalles d
+            LEFT JOIN FETCH d.autoPart
+            """)
     Page<Pedido> findAllWithRelaciones(Pageable pageable);
 
     // NUEVA: Query optimizada para un pedido específico
     @Query("""
-        SELECT p 
-        FROM Pedido p 
-        JOIN FETCH p.cliente 
-        LEFT JOIN FETCH p.detalles d
-        LEFT JOIN FETCH d.producto
-        WHERE p.id = :id
-        """)
+            SELECT p
+            FROM Pedido p
+            JOIN FETCH p.cliente
+            LEFT JOIN FETCH p.detalles d
+            LEFT JOIN FETCH d.autoPart
+            WHERE p.id = :id
+            """)
     Optional<Pedido> findByIdWithRelaciones(Long id);
 
     // NUEVA: Query para resumen (sin detalles)
     @Query("""
-        SELECT p 
-        FROM Pedido p 
-        JOIN FETCH p.cliente
-        """)
+            SELECT p
+            FROM Pedido p
+            JOIN FETCH p.cliente
+            """)
     Page<Pedido> findAllWithCliente(Pageable pageable);
 
     @Query("SELECT p FROM Pedido p WHERE p.cliente.asesor.id = :asesorId")

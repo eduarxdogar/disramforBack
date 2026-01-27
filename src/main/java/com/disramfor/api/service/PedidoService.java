@@ -6,9 +6,8 @@ import com.disramfor.api.entity.*;
 import com.disramfor.api.exception.BusinessException;
 import com.disramfor.api.exception.ResourceNotFoundException;
 import com.disramfor.api.repository.IClienteRepository;
-
 import com.disramfor.api.repository.IPedidoRepository;
-import com.disramfor.api.repository.IProductoRepository;
+import com.disramfor.api.repository.AutoPartRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,9 +28,8 @@ import org.springframework.beans.factory.annotation.Value;
 @RequiredArgsConstructor
 public class PedidoService {
     private final IPedidoRepository pedidoRepo;
-
     private final IClienteRepository clienteRepo;
-    private final IProductoRepository productoRepo;
+    private final AutoPartRepository autoPartRepository;
     private final IPedidoMapper mapper;
 
     @Value("${app.business.tasa-iva}")
@@ -48,36 +46,32 @@ public class PedidoService {
         pedido.setEstado(EstadoPedido.PENDIENTE);
         pedido.setDetalles(new ArrayList<>());
 
-        // --- OPTIMIZACION N+1: Batch Fetching ---
-        List<String> codigosProductos = req.getItems().stream()
-                .map(DetallePedidoRequestDTO::getProductoCodigo)
+        List<String> autoPartIds = req.getItems().stream()
+                .map(DetallePedidoRequestDTO::getAutoPartId)
                 .toList();
 
-        // Usamos Locking Pesimista para garantizar el stock
-        Map<String, Producto> productosMap = productoRepo.findAllByCodigoIn(codigosProductos).stream()
-                .collect(Collectors.toMap(Producto::getCodigo, p -> p));
+        Map<String, AutoPart> partsMap = autoPartRepository.findAllByIdIn(autoPartIds).stream()
+                .collect(Collectors.toMap(AutoPart::getId, p -> p));
 
         for (DetallePedidoRequestDTO item : req.getItems()) {
-            Producto p = productosMap.get(item.getProductoCodigo());
+            AutoPart p = partsMap.get(item.getAutoPartId());
             if (p == null) {
-                throw new ResourceNotFoundException("Producto no existe: " + item.getProductoCodigo());
+                throw new ResourceNotFoundException("AutoPart no existe con ID: " + item.getAutoPartId());
             }
 
-            // --- LÓGICA DE STOCK ---
-            if (p.getStockDisponible() < item.getCantidad()) {
-                throw new BusinessException("Stock insuficiente para el producto: " + p.getNombre() + ". Disponibles: "
-                        + p.getStockDisponible());
+            if (p.getStock() < item.getCantidad()) {
+                throw new BusinessException("Stock insuficiente para: " + p.getDescription() + ". Disponibles: "
+                        + p.getStock());
             }
 
-            p.setStockDisponible(p.getStockDisponible() - item.getCantidad());
-            // JPA manejará el update del producto al final de la transacción
+            p.setStock(p.getStock() - item.getCantidad());
 
-            BigDecimal precio = p.getPrecioUnitario();
+            BigDecimal precio = p.getPrice();
             BigDecimal subtotalItem = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
 
             DetallePedido det = new DetallePedido();
             det.setPedido(pedido);
-            det.setProducto(p);
+            det.setAutoPart(p);
             det.setCantidad(item.getCantidad());
             det.setPrecioUnitario(precio);
             det.setSubtotal(subtotalItem);
@@ -85,7 +79,6 @@ public class PedidoService {
             pedido.getDetalles().add(det);
         }
 
-        // --- LÓGICA DE CÁLCULO DE TOTALES (DRY) ---
         pedido.calcularTotales(tasaIva);
 
         Pedido guardado = pedidoRepo.save(pedido);
@@ -152,18 +145,10 @@ public class PedidoService {
             throw new IllegalStateException("Solo se pueden editar pedidos en estado PENDIENTE.");
         }
 
-        // 1. Devolver stock de los detalles existentes antes de limpiar
         for (DetallePedido det : pedido.getDetalles()) {
-            Producto p = det.getProducto();
-            // Devolvemos el stock sin lock explícito aquí, confiamos en la atomicidad de la
-            // transacción
-            // Si se requiere estricto, habría que buscar el producto de nuevo con lock,
-            // pero como estamos en la misma transacción y vamos a re-buscar p en breve si
-            // se repite...
-            // Mejor simple: devolvemos stock.
-            p.setStockDisponible(p.getStockDisponible() + det.getCantidad());
-            productoRepo.save(p); // Guardamos explícitamente para asegurar que el estado en BD refleje la
-                                  // devolución
+            AutoPart p = det.getAutoPart();
+            p.setStock(p.getStock() + det.getCantidad());
+            autoPartRepository.save(p);
         }
 
         pedido.getDetalles().clear();
@@ -175,38 +160,33 @@ public class PedidoService {
         pedido.setCliente(cliente);
         pedido.setFecha(LocalDateTime.now());
 
-        // 2. Procesar nuevos productos con Batch Fetching
-        List<String> codigosProductos = req.getItems().stream()
-                .map(DetallePedidoRequestDTO::getProductoCodigo)
+        List<String> autoPartIds = req.getItems().stream()
+                .map(DetallePedidoRequestDTO::getAutoPartId)
                 .toList();
 
-        Map<String, Producto> productosMap = productoRepo.findAllByCodigoIn(codigosProductos).stream()
-                .collect(Collectors.toMap(Producto::getCodigo, p -> p));
+        Map<String, AutoPart> partsMap = autoPartRepository.findAllByIdIn(autoPartIds).stream()
+                .collect(Collectors.toMap(AutoPart::getId, p -> p));
 
         BigDecimal subtotalCalculado = BigDecimal.ZERO;
         for (DetallePedidoRequestDTO itemDTO : req.getItems()) {
-            Producto producto = productosMap.get(itemDTO.getProductoCodigo());
-            if (producto == null) {
-                throw new ResourceNotFoundException("Producto no encontrado: " + itemDTO.getProductoCodigo());
+            AutoPart p = partsMap.get(itemDTO.getAutoPartId());
+            if (p == null) {
+                throw new ResourceNotFoundException("AutoPart no encontrado: " + itemDTO.getAutoPartId());
             }
 
-            // Stock Logic check
-            if (producto.getStockDisponible() < itemDTO.getCantidad()) {
-                throw new BusinessException("Stock insuficiente para el producto: " + producto.getNombre()
-                        + ". Disponibles: " + producto.getStockDisponible());
+            if (p.getStock() < itemDTO.getCantidad()) {
+                throw new BusinessException("Stock insuficiente para: " + p.getDescription()
+                        + ". Disponibles: " + p.getStock());
             }
 
-            // Descontar stock
-            producto.setStockDisponible(producto.getStockDisponible() - itemDTO.getCantidad());
-            // No save explícito necesario si está gestionado, pero por seguridad tras el
-            // save anterior... JPA lo maneja.
+            p.setStock(p.getStock() - itemDTO.getCantidad());
 
-            BigDecimal precio = producto.getPrecioUnitario();
+            BigDecimal precio = p.getPrice();
             BigDecimal subtotalItem = precio.multiply(BigDecimal.valueOf(itemDTO.getCantidad()));
 
             DetallePedido detalle = new DetallePedido();
             detalle.setPedido(pedido);
-            detalle.setProducto(producto);
+            detalle.setAutoPart(p);
             detalle.setCantidad(itemDTO.getCantidad());
             detalle.setPrecioUnitario(precio);
             detalle.setSubtotal(subtotalItem);
@@ -215,11 +195,9 @@ public class PedidoService {
             subtotalCalculado = subtotalCalculado.add(subtotalItem);
         }
 
-        // 3. Recalcular totales en el dominio
         pedido.calcularTotales(tasaIva);
 
         Pedido pedidoActualizado = pedidoRepo.save(pedido);
         return mapper.toResponse(pedidoActualizado);
     }
-
 }

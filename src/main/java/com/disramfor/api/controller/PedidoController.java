@@ -63,7 +63,7 @@ public class PedidoController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN') or hasRole('ADMIN') or @userSecurity.isOwner(authentication, #id)")
     public void eliminar(@PathVariable Long id) {
         service.eliminarPedido(id);
     }

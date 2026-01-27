@@ -34,7 +34,6 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        // --- CAMBIO IMPORTANTE ---
         // Aseguramos que podamos acceder a los detalles completos del usuario.
         if (userDetails instanceof Usuario) {
             return generateToken((Usuario) userDetails);

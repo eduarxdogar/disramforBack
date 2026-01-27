@@ -3,13 +3,11 @@ package com.disramfor.api.integration;
 import com.disramfor.api.dto.DetallePedidoRequestDTO;
 import com.disramfor.api.dto.PedidoRequestDTO;
 import com.disramfor.api.dto.PedidoResponseDTO;
-import com.disramfor.api.entity.Categoria;
+import com.disramfor.api.entity.AutoPart;
 import com.disramfor.api.entity.Cliente;
-import com.disramfor.api.entity.Producto;
-import com.disramfor.api.repository.ICategoriaRepository;
+import com.disramfor.api.repository.AutoPartRepository;
 import com.disramfor.api.repository.IClienteRepository;
 import com.disramfor.api.repository.IPedidoRepository;
-import com.disramfor.api.repository.IProductoRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,53 +49,48 @@ class PedidoRefactorIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
-    private IProductoRepository productoRepository;
+    private AutoPartRepository autoPartRepository;
     @Autowired
     private IPedidoRepository pedidoRepository;
     @Autowired
     private IClienteRepository clienteRepository;
-    @Autowired
-    private ICategoriaRepository categoriaRepository;
     @Autowired
     private ObjectMapper objectMapper;
 
     // MySQLContainer eliminado
 
     private Cliente cliente;
-    private Producto prodA;
-    private Producto prodB;
+    private AutoPart prodA;
+    private AutoPart prodB;
 
     @BeforeEach
     void setUp() {
         pedidoRepository.deleteAll();
-        productoRepository.deleteAll();
+        autoPartRepository.deleteAll();
         clienteRepository.deleteAll();
-        categoriaRepository.deleteAll();
 
-        Categoria cat = new Categoria();
-        cat.setNombre("General");
-        cat = categoriaRepository.save(cat);
+        // Categoria eliminada, AutoPart usa campos directos
 
         cliente = new Cliente();
         cliente.setNit("101010");
         cliente.setNombre("Cliente Refactor");
         cliente = clienteRepository.save(cliente);
 
-        prodA = new Producto();
-        prodA.setCodigo("A001");
-        prodA.setNombre("Producto A");
-        prodA.setPrecioUnitario(new BigDecimal("100.00"));
-        prodA.setStockDisponible(50); // Stock Inicial: 50
-        prodA.setCategoria(cat);
-        prodA = productoRepository.save(prodA);
+        prodA = new AutoPart();
+        prodA.setId("A001");
+        prodA.setDescription("Producto A");
+        prodA.setPrice(new BigDecimal("100.00"));
+        prodA.setStock(50); // Stock Inicial: 50
+        prodA.setProductType("TYPE_A");
+        prodA = autoPartRepository.save(prodA);
 
-        prodB = new Producto();
-        prodB.setCodigo("B001");
-        prodB.setNombre("Producto B");
-        prodB.setPrecioUnitario(new BigDecimal("200.00"));
-        prodB.setStockDisponible(30); // Stock Inicial: 30
-        prodB.setCategoria(cat);
-        prodB = productoRepository.save(prodB);
+        prodB = new AutoPart();
+        prodB.setId("B001");
+        prodB.setDescription("Producto B");
+        prodB.setPrice(new BigDecimal("200.00"));
+        prodB.setStock(30); // Stock Inicial: 30
+        prodB.setProductType("TYPE_B");
+        prodB = autoPartRepository.save(prodB);
     }
 
     @Test
@@ -106,7 +99,7 @@ class PedidoRefactorIntegrationTest {
     void crearPedido_DebeDescontarStockYCalcularIva() throws Exception {
         // Pedido: 2 unidades de A
         DetallePedidoRequestDTO item1 = new DetallePedidoRequestDTO();
-        item1.setProductoCodigo("A001");
+        item1.setAutoPartId("A001");
         item1.setCantidad(2);
 
         PedidoRequestDTO dto = new PedidoRequestDTO();
@@ -131,9 +124,9 @@ class PedidoRefactorIntegrationTest {
         assertThat(pedido.getTotal()).isEqualByComparingTo("238.00");
 
         // 2. Verificar Stock en BD
-        Producto prodA_DB = productoRepository.findById("A001").orElseThrow();
+        AutoPart prodA_DB = autoPartRepository.findById("A001").orElseThrow();
         // Inicial 50 - 2 = 48
-        assertThat(prodA_DB.getStockDisponible()).isEqualTo(48);
+        assertThat(prodA_DB.getStock()).isEqualTo(48);
     }
 
     @Test
@@ -142,7 +135,7 @@ class PedidoRefactorIntegrationTest {
     void actualizarPedido_DebeManejarStockCorrectamente() throws Exception {
         // --- PASO 1: Crear pedido inicial (5 items de A) ---
         DetallePedidoRequestDTO itemInicial = new DetallePedidoRequestDTO();
-        itemInicial.setProductoCodigo("A001");
+        itemInicial.setAutoPartId("A001");
         itemInicial.setCantidad(5);
 
         PedidoRequestDTO createDto = new PedidoRequestDTO();
@@ -159,18 +152,18 @@ class PedidoRefactorIntegrationTest {
         Long pedidoId = objectMapper.readValue(res, PedidoResponseDTO.class).getId();
 
         // Check Stock Intermedio: A debía bajar de 50 a 45
-        Producto prodA_Intermedio = productoRepository.findById("A001").orElseThrow();
-        assertThat(prodA_Intermedio.getStockDisponible()).isEqualTo(45);
+        AutoPart prodA_Intermedio = autoPartRepository.findById("A001").orElseThrow();
+        assertThat(prodA_Intermedio.getStock()).isEqualTo(45);
 
         // --- PASO 2: Actualizar pedido ---
         // Cambiamos A de 5 a 2 (Debe devolver 3 al stock)
         // Agregamos B con 10 (Debe restar 10 al stock)
         DetallePedidoRequestDTO itemEditadoA = new DetallePedidoRequestDTO();
-        itemEditadoA.setProductoCodigo("A001");
+        itemEditadoA.setAutoPartId("A001");
         itemEditadoA.setCantidad(2);
 
         DetallePedidoRequestDTO itemNuevoB = new DetallePedidoRequestDTO();
-        itemNuevoB.setProductoCodigo("B001");
+        itemNuevoB.setAutoPartId("B001");
         itemNuevoB.setCantidad(10);
 
         PedidoRequestDTO updateDto = new PedidoRequestDTO();
@@ -192,8 +185,8 @@ class PedidoRefactorIntegrationTest {
         // Devolver(+5) -> 50 (Teórico, al limpiar detalles)
         // Restar(-2) -> 48
         // FINAL ESPERADO: 48
-        Producto prodA_Final = productoRepository.findById("A001").orElseThrow();
-        assertThat(prodA_Final.getStockDisponible()).isEqualTo(48);
+        AutoPart prodA_Final = autoPartRepository.findById("A001").orElseThrow();
+        assertThat(prodA_Final.getStock()).isEqualTo(48);
 
         // Producto B:
         // Inicial: 30
@@ -201,7 +194,7 @@ class PedidoRefactorIntegrationTest {
         // Update:
         // Restar(-10) -> 20
         // FINAL ESPERADO: 20
-        Producto prodB_Final = productoRepository.findById("B001").orElseThrow();
-        assertThat(prodB_Final.getStockDisponible()).isEqualTo(20);
+        AutoPart prodB_Final = autoPartRepository.findById("B001").orElseThrow();
+        assertThat(prodB_Final.getStock()).isEqualTo(20);
     }
 }

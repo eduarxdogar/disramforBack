@@ -21,7 +21,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-@EnableMethodSecurity // <-- AÑADIMOS ESTA ANOTACIÓN PARA ACTIVAR LA SEGURIDAD POR MÉTODO
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -39,7 +39,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/categorias/**").permitAll()
                         .requestMatchers("/api/productos/**").permitAll()
 
-                        // --- CORRECCIÓN AQUÍ ---
                         // Le decimos que para acceder a clientes, DEBE estar autenticado.
                         .requestMatchers("/api/clientes/**").authenticated()
 
