@@ -3,36 +3,42 @@ package com.disramfor.api.service;
 import com.disramfor.api.dto.*;
 import com.disramfor.api.dto.IPedidoMapper;
 import com.disramfor.api.entity.*;
+import com.disramfor.api.exception.BusinessException;
+import com.disramfor.api.exception.ResourceNotFoundException;
 import com.disramfor.api.repository.IClienteRepository;
-import com.disramfor.api.repository.IDetallePedidoRepository;
 import com.disramfor.api.repository.IPedidoRepository;
-import com.disramfor.api.repository.IProductoRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.disramfor.api.repository.AutoPartRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
 public class PedidoService {
     private final IPedidoRepository pedidoRepo;
-    private final IDetallePedidoRepository detalleRepo;
     private final IClienteRepository clienteRepo;
-    private final IProductoRepository productoRepo;
+    private final AutoPartRepository autoPartRepository;
     private final IPedidoMapper mapper;
 
-    @org.springframework.transaction.annotation.Transactional
+    @Value("${app.business.tasa-iva}")
+    private BigDecimal tasaIva;
+
+    @Transactional
     public PedidoResponseDTO crearPedido(PedidoRequestDTO req) {
         Cliente c = clienteRepo.findById(req.getClienteId())
-                .orElseThrow(() -> new EntityNotFoundException("Cliente no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no existe con ID: " + req.getClienteId()));
 
         Pedido pedido = new Pedido();
         pedido.setCliente(c);
@@ -40,73 +46,66 @@ public class PedidoService {
         pedido.setEstado(EstadoPedido.PENDIENTE);
         pedido.setDetalles(new ArrayList<>());
 
-        BigDecimal total = BigDecimal.ZERO;
+        List<String> autoPartIds = req.getItems().stream()
+                .map(DetallePedidoRequestDTO::getAutoPartId)
+                .toList();
+
+        Map<String, AutoPart> partsMap = autoPartRepository.findAllByIdIn(autoPartIds).stream()
+                .collect(Collectors.toMap(AutoPart::getId, p -> p));
 
         for (DetallePedidoRequestDTO item : req.getItems()) {
+            AutoPart p = partsMap.get(item.getAutoPartId());
+            if (p == null) {
+                throw new ResourceNotFoundException("AutoPart no existe con ID: " + item.getAutoPartId());
+            }
 
-            Producto p = productoRepo.findById(item.getProductoCodigo())
-                    .orElseThrow(() -> new EntityNotFoundException(
-                            "Producto no existe: " + item.getProductoCodigo()));
+            if (p.getStock() < item.getCantidad()) {
+                throw new BusinessException("Stock insuficiente para: " + p.getDescription() + ". Disponibles: "
+                        + p.getStock());
+            }
 
-            BigDecimal precio     = p.getPrecioUnitario();
-            BigDecimal subtotal   = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
+            p.setStock(p.getStock() - item.getCantidad());
+
+            BigDecimal precio = p.getPrice();
+            BigDecimal subtotalItem = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
 
             DetallePedido det = new DetallePedido();
             det.setPedido(pedido);
-            det.setProducto(p);
+            det.setAutoPart(p);
             det.setCantidad(item.getCantidad());
             det.setPrecioUnitario(precio);
-            det.setSubtotal(subtotal);
+            det.setSubtotal(subtotalItem);
 
             pedido.getDetalles().add(det);
-            total = total.add(subtotal);
         }
 
-        pedido.setTotal(total);
+        pedido.calcularTotales(tasaIva);
+
         Pedido guardado = pedidoRepo.save(pedido);
         return mapper.toResponse(guardado);
     }
 
-    // ¡ESTE MÉTODO REEMPLAZA A TU ANTIGUO listarPedidos()!
-    @org.springframework.transaction.annotation.Transactional(readOnly = true) // Buena práctica para métodos de solo lectura
+    @Transactional(readOnly = true)
     public Page<PedidoResumenDTO> listarPedidosResumen(Pageable pageable) {
-        Page<Pedido> pedidosPage = pedidoRepo.findAll(pageable);
-        return pedidosPage.map(this::convertirAPedidoResumenDTO);
+        return pedidoRepo.findAll(pageable).map(mapper::toResumen);
     }
-
-    // Método de ayuda para la conversión (Corregido)
-    private PedidoResumenDTO convertirAPedidoResumenDTO(Pedido pedido) {
-        PedidoResumenDTO dto = new PedidoResumenDTO();
-        dto.setId(pedido.getId());
-        dto.setFecha(pedido.getFecha());
-        dto.setEstado(pedido.getEstado().name());
-        dto.setTotal(pedido.getTotal());
-
-        if (pedido.getCliente() != null) {
-            dto.setClienteNombre(pedido.getCliente().getNombre());
-            // CORRECCIÓN: Obtenemos el asesor desde el Cliente, como en tu modelo.
-            dto.setAsesorNombre(pedido.getCliente().getAsesor());
-        }
-
-        return dto;
-    }
-
 
     public PedidoResponseDTO obtenerPedido(Long id) {
         Pedido p = pedidoRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Pedido no existe"));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe"));
         return mapper.toResponse(p);
     }
+
     public void eliminarPedido(Long id) {
         Pedido p = pedidoRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Pedido no existe: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe: " + id));
         pedidoRepo.delete(p);
     }
 
     @Transactional
-    public void actualizarParcial(Long id, Map<String,Object> cambios) {
+    public void actualizarParcial(Long id, Map<String, Object> cambios) {
         Pedido p = pedidoRepo.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Pedido no existe: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no existe: " + id));
 
         if (cambios.containsKey("estado")) {
             String s = cambios.get("estado").toString().toUpperCase();
@@ -121,15 +120,84 @@ public class PedidoService {
         if (cambios.containsKey("clienteId")) {
             Long cid = Long.valueOf(cambios.get("clienteId").toString());
             Cliente c = clienteRepo.findById(cid)
-                    .orElseThrow(() -> new EntityNotFoundException("Cliente no existe: " + cid));
+                    .orElseThrow(() -> new ResourceNotFoundException("Cliente no existe: " + cid));
             p.setCliente(c);
         }
-        // … demás campos que quieras exponer …
 
         pedidoRepo.save(p);
     }
 
+    @Transactional
+    public void actualizarEstado(Long id, EstadoPedido nuevoEstado) {
+        Pedido pedido = pedidoRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con id: " + id));
 
+        pedido.setEstado(nuevoEstado);
+        pedidoRepo.save(pedido);
+    }
 
+    @Transactional
+    public PedidoResponseDTO actualizarPedido(Long id, PedidoRequestDTO req) {
+        Pedido pedido = pedidoRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con ID: " + id));
 
+        if (pedido.getEstado() != EstadoPedido.PENDIENTE) {
+            throw new IllegalStateException("Solo se pueden editar pedidos en estado PENDIENTE.");
+        }
+
+        for (DetallePedido det : pedido.getDetalles()) {
+            AutoPart p = det.getAutoPart();
+            p.setStock(p.getStock() + det.getCantidad());
+            autoPartRepository.save(p);
+        }
+
+        pedido.getDetalles().clear();
+
+        Cliente cliente = clienteRepo.findById(req.getClienteId())
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Cliente no encontrado con ID: " + req.getClienteId()));
+
+        pedido.setCliente(cliente);
+        pedido.setFecha(LocalDateTime.now());
+
+        List<String> autoPartIds = req.getItems().stream()
+                .map(DetallePedidoRequestDTO::getAutoPartId)
+                .toList();
+
+        Map<String, AutoPart> partsMap = autoPartRepository.findAllByIdIn(autoPartIds).stream()
+                .collect(Collectors.toMap(AutoPart::getId, p -> p));
+
+        BigDecimal subtotalCalculado = BigDecimal.ZERO;
+        for (DetallePedidoRequestDTO itemDTO : req.getItems()) {
+            AutoPart p = partsMap.get(itemDTO.getAutoPartId());
+            if (p == null) {
+                throw new ResourceNotFoundException("AutoPart no encontrado: " + itemDTO.getAutoPartId());
+            }
+
+            if (p.getStock() < itemDTO.getCantidad()) {
+                throw new BusinessException("Stock insuficiente para: " + p.getDescription()
+                        + ". Disponibles: " + p.getStock());
+            }
+
+            p.setStock(p.getStock() - itemDTO.getCantidad());
+
+            BigDecimal precio = p.getPrice();
+            BigDecimal subtotalItem = precio.multiply(BigDecimal.valueOf(itemDTO.getCantidad()));
+
+            DetallePedido detalle = new DetallePedido();
+            detalle.setPedido(pedido);
+            detalle.setAutoPart(p);
+            detalle.setCantidad(itemDTO.getCantidad());
+            detalle.setPrecioUnitario(precio);
+            detalle.setSubtotal(subtotalItem);
+
+            pedido.getDetalles().add(detalle);
+            subtotalCalculado = subtotalCalculado.add(subtotalItem);
+        }
+
+        pedido.calcularTotales(tasaIva);
+
+        Pedido pedidoActualizado = pedidoRepo.save(pedido);
+        return mapper.toResponse(pedidoActualizado);
+    }
 }

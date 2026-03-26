@@ -1,5 +1,6 @@
 package com.disramfor.api.security;
 
+import com.disramfor.api.entity.Usuario; // Importamos la entidad Usuario
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -33,8 +34,25 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
+        //  detalles completos del usuario.
+        if (userDetails instanceof Usuario) {
+            return generateToken((Usuario) userDetails);
+        }
+        // Fallback
         return generateToken(new HashMap<>(), userDetails);
     }
+
+    // Sobrecargamos el método para que sea más fácil de usar
+    public String generateToken(Usuario usuario) {
+        Map<String, Object> claims = new HashMap<>();
+        // INYECTAMOS LOS DATOS AL TOKEN
+        claims.put("userId", usuario.getId());
+        claims.put("nombreUsuario", usuario.getNombreUsuario());
+        claims.put("rol", usuario.getRol().name());
+
+        return generateToken(claims, usuario);
+    }
+
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
         return buildToken(extraClaims, userDetails, jwtExpiration);
@@ -48,7 +66,7 @@ public class JwtService {
         return Jwts
                 .builder()
                 .setClaims(extraClaims)
-                .setSubject(userDetails.getUsername())
+                .setSubject(userDetails.getUsername()) // El 'subject' sigue siendo el email
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)

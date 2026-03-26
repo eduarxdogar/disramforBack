@@ -1,7 +1,8 @@
 package com.disramfor.api.dto;
 
-import com.disramfor.api.entity.Cliente;
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 /**
  * DTO para las respuestas de Cliente.
@@ -15,7 +16,11 @@ public class ClienteResponseDTO {
     private String ciudad;
     private String telefono;
     private String email;
-    private String asesor;
+    private BigDecimal descuento;
+
+    // CAMPOS AGREGADOS PARA MOSTRAR LA INFORMACIÓN DEL ASESOR
+    private Long asesorId;
+    private String asesorNombre;
 
 
 }

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -20,6 +21,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -36,7 +38,10 @@ public class SecurityConfig {
                         // <--- AHORA TODOS ESTOS ENDPOINTS SON PÚBLICOS TEMPORALMENTE
                         .requestMatchers("/api/categorias/**").permitAll()
                         .requestMatchers("/api/productos/**").permitAll()
-                        .requestMatchers("/api/clientes/**").permitAll()
+
+                        // Le decimos que para acceder a clientes, DEBE estar autenticado.
+                        .requestMatchers("/api/clientes/**").authenticated()
+
                         .requestMatchers("/api/pedidos/**").permitAll()
                         // Todas las demás peticiones necesitan autenticación.
                         .anyRequest().authenticated()

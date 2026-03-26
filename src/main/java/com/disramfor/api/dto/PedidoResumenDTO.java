@@ -8,9 +8,9 @@ import java.time.LocalDateTime;
 public class PedidoResumenDTO {
     private Long id;
     private LocalDateTime fecha;
-    private String clienteNombre;
-    private String asesorNombre; // Asumiendo que tienes un asesor en el pedido
     private String estado;
     private BigDecimal total;
+    private String clienteNombre;
+    private String asesorNombre;
 }
 

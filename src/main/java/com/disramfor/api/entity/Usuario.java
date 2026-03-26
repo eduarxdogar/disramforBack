@@ -1,5 +1,6 @@
 package com.disramfor.api.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -9,25 +10,36 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+
 @Entity
 @Builder
 @Table(name = "usuarios")
 @Getter
 @Setter
-@ToString
+@ToString(exclude = "clientesAsignados")
 @AllArgsConstructor
 @NoArgsConstructor
 public class Usuario implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "usuarionombre")
-    private String username;
+
+
+    @Column(name = "nombre_usuario")
+    private String nombreUsuario;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
     private String password;
 
     @Enumerated(EnumType.STRING)
     private Rol rol;
+
+    @OneToMany(mappedBy = "asesor", cascade = CascadeType.MERGE, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Cliente> clientesAsignados;
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -39,10 +51,17 @@ public class Usuario implements UserDetails {
         return password;
     }
 
+    // Spring Security seguirá usando el email como el "username" para el login.
     @Override
     public String getUsername() {
-        return email; // Usamos el email como nombre de usuario para el login
+        return email;
     }
+
+    // Getter explícito para el nombre real del usuario.
+    public String getNombreUsuario() {
+        return nombreUsuario;
+    }
+
 
     @Override
     public boolean isAccountNonExpired() {

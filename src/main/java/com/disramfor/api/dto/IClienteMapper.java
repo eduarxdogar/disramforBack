@@ -1,4 +1,5 @@
 package com.disramfor.api.dto;
+
 import com.disramfor.api.entity.Cliente;
 import org.mapstruct.*;
 
@@ -6,14 +7,16 @@ import org.mapstruct.*;
         nullValueMappingStrategy = NullValueMappingStrategy.RETURN_NULL)
 public interface IClienteMapper {
 
-    // De entidad a DTO de respuesta
+    @Mapping(source = "asesor.id", target = "asesorId")
+    @Mapping(source = "asesor.username", target = "asesorNombre")
     ClienteResponseDTO toResponse(Cliente cliente);
 
-    // De DTO de petición a entidad para creación
-    @Mapping(target = "id", ignore = true)  // dejamos que DB genere el id
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "asesor", ignore = true)
     Cliente toEntity(ClienteRequestDTO dto);
 
-    // Para actualización, toma datos del DTO y los copia a la entidad existente
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "asesor", ignore = true)
+    @Mapping(target = "id", ignore = true)
     void updateEntityFromDto(ClienteRequestDTO dto, @MappingTarget Cliente entity);
 }

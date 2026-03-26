@@ -17,16 +17,23 @@ public class DetallePedido {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pedido_id", nullable = false)
     private Pedido pedido;
+
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_codigo", nullable = false)
-    private Producto producto;
+    private AutoPart autoPart;
 
+    @Column(name = "cantidad")
     private Integer cantidad;
+
+    @Column(name = "precio_unitario")
     private BigDecimal precioUnitario;
+
+    @Column(name = "subtotal")
     private BigDecimal subtotal;
 }

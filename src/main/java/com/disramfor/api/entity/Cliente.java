@@ -1,9 +1,9 @@
 package com.disramfor.api.entity;
-import com.disramfor.api.dto.ClienteRequestDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "cliente")
@@ -27,5 +27,12 @@ public class Cliente {
     private String telefono;
     private String email;
 
-    private String asesor;
+    @Column(precision = 5, scale = 2)
+    private BigDecimal descuento;
+
+   
+    //  relación con la entidad Usuario
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "asesor_id")
+    private Usuario asesor;
 }

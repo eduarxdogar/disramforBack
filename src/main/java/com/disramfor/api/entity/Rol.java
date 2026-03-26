@@ -5,5 +5,7 @@ public enum Rol {
     SUPERVISOR,
     PIKING,
     DESPACHO,
-    ADMIN
+    ADMIN,
+    CARTERA,
+    ASESOR
 }
