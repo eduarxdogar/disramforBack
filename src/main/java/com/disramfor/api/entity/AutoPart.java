@@ -27,7 +27,7 @@ public class AutoPart {
 
     @Id
     @Column(name = "codigo", length = 50)
-    private String id; // Mapped to 'codigo'
+    private String id;
 
     @Column(name = "nombre", nullable = false, length = 500)
     private String description;
@@ -41,7 +41,6 @@ public class AutoPart {
     @Column(name = "stock_disponible", nullable = false)
     private Integer stock;
 
-    // Hierarchy Filters - Mapped to Spanish columns
     @Column(name = "tipo_producto", length = 50)
     private String productType;
 

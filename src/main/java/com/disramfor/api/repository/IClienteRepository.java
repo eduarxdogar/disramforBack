@@ -24,8 +24,6 @@ public interface IClienteRepository extends JpaRepository<Cliente, Long>, JpaSpe
     """)
     Page<Cliente> searchByTerm(@Param("term") String term, Pageable pageable);
 
-    // --- NUEVO MÉTODO ---
-    // Busca clientes por el ID del asesor asignado.
     @Query("""
         SELECT c
         FROM Cliente c

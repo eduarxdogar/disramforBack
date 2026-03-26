@@ -25,7 +25,7 @@ public interface IPedidoRepository extends JpaRepository<Pedido, Long> {
             """)
     Page<Pedido> findAllWithRelaciones(Pageable pageable);
 
-    // NUEVA: Query optimizada para un pedido específico
+    //  Query optimizada para un pedido específico
     @Query("""
             SELECT p
             FROM Pedido p
@@ -36,7 +36,7 @@ public interface IPedidoRepository extends JpaRepository<Pedido, Long> {
             """)
     Optional<Pedido> findByIdWithRelaciones(Long id);
 
-    // NUEVA: Query para resumen (sin detalles)
+    //  Query para resumen (sin detalles)
     @Query("""
             SELECT p
             FROM Pedido p

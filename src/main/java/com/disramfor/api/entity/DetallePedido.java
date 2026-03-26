@@ -25,7 +25,7 @@ public class DetallePedido {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_codigo", nullable = false) // Reusing legacy column name 'producto_codigo'
+    @JoinColumn(name = "producto_codigo", nullable = false)
     private AutoPart autoPart;
 
     @Column(name = "cantidad")

@@ -34,7 +34,6 @@ public class AuthController {
         try {
             return ResponseEntity.ok(authService.register(request));
         } catch (IllegalStateException e) {
-            // Si el servicio lanza esta excepción, respondemos con un error 409 Conflict
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }

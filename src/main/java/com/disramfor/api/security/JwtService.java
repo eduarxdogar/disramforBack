@@ -34,18 +34,18 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        // Aseguramos que podamos acceder a los detalles completos del usuario.
+        //  detalles completos del usuario.
         if (userDetails instanceof Usuario) {
             return generateToken((Usuario) userDetails);
         }
-        // Fallback por si acaso, aunque no debería ocurrir con nuestra configuración.
+        // Fallback
         return generateToken(new HashMap<>(), userDetails);
     }
 
     // Sobrecargamos el método para que sea más fácil de usar
     public String generateToken(Usuario usuario) {
         Map<String, Object> claims = new HashMap<>();
-        // --- ¡AQUÍ INYECTAMOS LOS DATOS AL TOKEN! ---
+        // INYECTAMOS LOS DATOS AL TOKEN
         claims.put("userId", usuario.getId());
         claims.put("nombreUsuario", usuario.getNombreUsuario());
         claims.put("rol", usuario.getRol().name());

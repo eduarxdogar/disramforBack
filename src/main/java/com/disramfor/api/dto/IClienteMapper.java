@@ -8,7 +8,7 @@ import org.mapstruct.*;
 public interface IClienteMapper {
 
     @Mapping(source = "asesor.id", target = "asesorId")
-    @Mapping(source = "asesor.username", target = "asesorNombre") // Asumo que el campo en Usuario es 'username'
+    @Mapping(source = "asesor.username", target = "asesorNombre")
     ClienteResponseDTO toResponse(Cliente cliente);
 
     @Mapping(target = "id", ignore = true)
@@ -17,6 +17,6 @@ public interface IClienteMapper {
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "asesor", ignore = true)
-    @Mapping(target = "id", ignore = true) // <-- ESTA ES LA LÍNEA QUE FALTABA
+    @Mapping(target = "id", ignore = true)
     void updateEntityFromDto(ClienteRequestDTO dto, @MappingTarget Cliente entity);
 }

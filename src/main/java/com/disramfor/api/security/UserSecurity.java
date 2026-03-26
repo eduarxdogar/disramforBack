@@ -21,7 +21,7 @@ public class UserSecurity {
 
         String currentUsername = authentication.getName();
 
-        // Si es ADMIN, siempre es true (redundancia útil)
+        //  (redundancia útil)
         if (authentication.getAuthorities().contains(new SimpleGrantedAuthority("ADMIN")) ||
                 authentication.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"))) {
             return true;
@@ -30,7 +30,6 @@ public class UserSecurity {
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado: " + pedidoId));
 
-        // Lógica de propiedad:
         // 1. Si el usuario es el ASESOR del cliente del pedido
         if (pedido.getCliente() != null && pedido.getCliente().getAsesor() != null) {
             String emailAsesor = pedido.getCliente().getAsesor().getEmail();
@@ -39,7 +38,7 @@ public class UserSecurity {
             }
         }
 
-        // 2. Opcional: Si el usuario es el CLIENTE mismo (si hay login de clientes
+        //  Si el usuario es el CLIENTE mismo (si hay login de clientes
         // verificado por email)
         if (pedido.getCliente() != null && pedido.getCliente().getEmail() != null) {
             if (pedido.getCliente().getEmail().equalsIgnoreCase(currentUsername)) {

@@ -10,7 +10,7 @@ import java.util.List;
 public class PedidoRequestDTO {
     @NotNull(message="El cliente es obligatorio")
     private Long clienteId;
-    // Asumimos que también quieres saber qué asesor hizo el pedido
+    //  qué asesor hizo el pedido
     @NotNull(message = "El ID del asesor es obligatorio")
     private Long asesorId;
 

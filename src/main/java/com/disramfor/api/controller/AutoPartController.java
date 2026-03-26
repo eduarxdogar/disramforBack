@@ -21,7 +21,6 @@ public class AutoPartController {
 
     private final AutoPartService autoPartService;
 
-    // --- Filters Endpoints ---
 
     @GetMapping("/filters/types")
     public ResponseEntity<List<String>> getTypes() {
@@ -45,7 +44,6 @@ public class AutoPartController {
         return ResponseEntity.ok(autoPartService.getEngines(type, brand, model));
     }
 
-    // --- Search Endpoint ---
 
     @GetMapping({ "/autoparts", "/productos" })
     public ResponseEntity<Page<AutoPartDTO>> searchParts(
